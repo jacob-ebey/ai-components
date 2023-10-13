@@ -55,7 +55,7 @@ export default function ComponentDashboard() {
           <Link to="/dashboard">Back to dashboard</Link>
         </Button>
       </nav>
-      <div className="flex flex-col-reverse lg:flex-row gap-8">
+      <div className="flex flex-col-reverse lg:flex-row gap-4">
         <section className="flex flex-1 overflow-x-auto">
           <pre className="overflow-x-auto p-4 border flex-1">
             <code className="text-sm font-mono">{revision.code}</code>
