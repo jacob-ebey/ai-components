@@ -3,12 +3,7 @@ import {
   type LoaderFunctionArgs,
   redirect,
 } from "@remix-run/node";
-import {
-  Link,
-  useActionData,
-  useFetcher,
-  useLoaderData,
-} from "@remix-run/react";
+import { Link, useFetcher, useLoaderData } from "@remix-run/react";
 import { desc, eq, sql } from "drizzle-orm";
 import { OpenAI } from "openai";
 
