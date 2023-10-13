@@ -44,7 +44,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     .from(componentTable)
     .where(eq(componentTable.userId, userId))
     .orderBy(desc(componentTable.id));
-  console.log(dbComponents);
 
   const components: ((typeof dbComponents)[0] & {
     versions: number;

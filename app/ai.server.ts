@@ -1,7 +1,64 @@
+import * as fs from "node:fs/promises";
+import type {} from "openai";
 import { multipassFactory } from "openai-multipass";
+import tiktoken from "@dqbd/tiktoken";
+
+const tiktokenEncoder = tiktoken.get_encoding("cl100k_base");
+
+const exampleTokenLimit = 100;
+
+function logPromptTokens(
+  label: string,
+  messages: {
+    role: "function" | "system" | "user" | "assistant";
+    content: string;
+  }[]
+): {
+  role: "function" | "system" | "user" | "assistant";
+  content: string;
+}[] {
+  let tokens = 0;
+  for (const message of messages) {
+    tokens += tiktokenEncoder.encode(message.content).length;
+  }
+  console.log(JSON.stringify(messages, null, 2));
+  console.log(`${label} prompt tokens : ${tokens}`);
+
+  return messages;
+}
 
 export const designComponentFactory = multipassFactory({ debug: true })
   .pass("design-component-from-description", async ({ input, complete }) => {
+    const componentsMetadata = JSON.parse(
+      await fs.readFile("model/component-lib/dump.json", "utf8")
+    ) as {
+      name: string;
+      description: string;
+      docs: {
+        import: {
+          source: string;
+          code: string;
+        };
+        use: {
+          source: string;
+          code: string;
+        }[];
+        examples: {
+          source: string;
+          code: string;
+        }[];
+      };
+    }[];
+    const iconsMetadata = JSON.parse(
+      await fs.readFile("model/icons/dump.json", "utf8")
+    ) as {
+      source: string;
+      name: string;
+      title: string;
+      tags: string[];
+      categories: string[];
+    }[];
+
     const completion = await complete({
       model: "gpt-3.5-turbo",
       functions: [
@@ -34,22 +91,30 @@ export const designComponentFactory = multipassFactory({ debug: true })
                     items: {
                       type: "string",
                       description: "the name of the icon element needed",
-                      enum: [],
                     },
                   },
                 },
                 required: ["does_new_component_need_icons_elements"],
+              },
+              use_library_components: {
+                type: "array",
+                description: "the name of the library components to use",
+                items: {
+                  type: "string",
+                  enum: componentsMetadata.map((e) => e.name),
+                },
               },
             },
             required: [
               "new_component_name",
               "new_component_description",
               "new_component_icons_elements",
+              "use_library_components",
             ],
           },
         },
       ],
-      messages: [
+      messages: logPromptTokens("design", [
         {
           role: `system`,
           content:
@@ -60,7 +125,13 @@ export const designComponentFactory = multipassFactory({ debug: true })
         {
           role: `user`,
           content:
-            "Multiple library components can be used while creating a new component in order to help you do a better design job, faster.",
+            "Multiple library components can be used while creating a new component in order to help you do a better design job, faster.\n\nAVAILABLE LIBRARY COMPONENTS:\n```\n" +
+            componentsMetadata
+              .map((e) => {
+                return `${e.name} : ${e.description};`;
+              })
+              .join("\n") +
+            "\n```",
         },
         {
           role: `user`,
@@ -70,7 +141,7 @@ export const designComponentFactory = multipassFactory({ debug: true })
             "\n```\n\n" +
             `Design the new React web component task for the user as the creative genius you are`,
         },
-      ],
+      ]),
     });
 
     if (!completion.functionCall) {
@@ -83,6 +154,7 @@ export const designComponentFactory = multipassFactory({ debug: true })
         does_new_component_need_icons_elements: boolean;
         if_so_what_new_component_icons_elements_are_needed?: string[];
       };
+      use_library_components: string[];
     };
 
     return {
@@ -97,18 +169,84 @@ export const designComponentFactory = multipassFactory({ debug: true })
           ? functionCall.new_component_icons_elements
               .if_so_what_new_component_icons_elements_are_needed!
           : null,
+      components:
+        (functionCall.use_library_components?.length ?? 0) > 0
+          ? functionCall.use_library_components
+          : null,
+      componentsMetadata,
+      iconsMetadata,
     };
   })
   .pass("build-component-context", ({ input }) => {
+    console.log({ components: input.components });
+    const neededComponents = new Set(
+      input.components?.map((c) => c.toLowerCase()) ?? []
+    );
+    const components = input.componentsMetadata.filter((c) =>
+      neededComponents.has(c.name.toLowerCase())
+    );
+
+    const componentsContext: {
+      role: "user";
+      content: string;
+    }[] = [];
+    let i = -1;
+    for (const component of components) {
+      i++;
+      let consumedTokens = 0;
+
+      const examples: (typeof component)["docs"]["examples"][0][] = [];
+      for (const example of component.docs.examples) {
+        consumedTokens += tiktokenEncoder.encode(example.code).length;
+        if (consumedTokens > exampleTokenLimit) {
+          break;
+        }
+        examples.push(example);
+      }
+
+      const examples_block = !examples.length
+        ? ""
+        : "\n\n" +
+          `# full code examples of React components that use ${component.name} :\n` +
+          examples
+            .map((example) => {
+              return (
+                "```" + example.source + "\n" + example.code.trim() + "\n```"
+              );
+            })
+            .join(`\n\n`);
+
+      componentsContext.push({
+        role: `user`,
+        content:
+          `Library components can be used while making the new React component\n\n` +
+          `Suggested library component (${i + 1}/${components.length}) : ${
+            component.name
+          } - ${component.description}\n\n\n` +
+          `# ${component.name} can be imported into the new component like this:\n` +
+          "```tsx\n" +
+          component.docs.import.code.trim() +
+          "\n```\n\n---\n\n" +
+          `# examples of how ${component.name} can be used inside the new component:\n` +
+          component.docs.use
+            .map((block) => {
+              return "```tsx\n" + block.code.trim() + "\n```";
+            })
+            .join(`\n\n`) +
+          "\n\n---" +
+          examples_block,
+      });
+    }
+
     return {
       ...input,
-      componentContext: [],
+      componentsContext,
     };
   })
   .pass("generate-new-component", async ({ input, complete }) => {
     const completion = await complete({
       model: "gpt-4",
-      messages: [
+      messages: logPromptTokens("generate", [
         {
           role: `system`,
           content:
@@ -119,14 +257,14 @@ export const designComponentFactory = multipassFactory({ debug: true })
             `You will write the full React component code, which should include all imports.` +
             `Your generated code will be directly written to a .tsx React component file and used in production.`,
         },
-        ...input.componentContext,
+        ...input.componentsContext,
         {
           role: `user`,
           content:
             `- COMPONENT NAME : ${input.name}\n\n` +
             `- COMPONENT DESCRIPTION :\n` +
             "```\n" +
-            input +
+            input.prompt +
             "\n```\n\n" +
             `- additional component suggestions :\n` +
             "```\n" +
@@ -147,7 +285,7 @@ export const designComponentFactory = multipassFactory({ debug: true })
             `$- Very important : Your component should be exported as default !\n` +
             `Write the React component code as the creative genius and React component genius you are - with good ui formatting.\n`,
         },
-      ],
+      ]),
     });
 
     if (!completion.content) {
