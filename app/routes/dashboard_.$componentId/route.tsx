@@ -1,8 +1,8 @@
 import { redirect, type LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { and, asc, eq } from "drizzle-orm";
-import { link } from "~/components/defaults";
 
+import { Button } from "~/components/ui/button";
 import { db, componentRevisionTable, componentTable } from "~/db.server";
 import { sessionStorage } from "~/http.server";
 
@@ -51,19 +51,20 @@ export default function ComponentDashboard() {
   return (
     <main className="p-4">
       <nav className="mb-4">
-        <Link to="/dashboard" className={link}>
-          Back to dashboard
-        </Link>
+        <Button asChild variant="link">
+          <Link to="/dashboard">Back to dashboard</Link>
+        </Button>
       </nav>
-      <section className="flex-1 overflow-x-auto max-w-2xl">
-        <h1 className="text-2xl font-bold mb-4">{component.name}</h1>
-        <p className="mb-8">{component.description}</p>
-      </section>
-      <section className="flex flex-col-reverse lg:flex-row gap-8">
-        <pre className="overflow-x-auto p-4 border">
-          <code>{revision.code}</code>
-        </pre>
-        <aside className="lg:max-w-xs">
+      <div className="flex flex-col-reverse lg:flex-row gap-8">
+        <section className="flex flex-1 overflow-x-auto">
+          <pre className="overflow-x-auto p-4 border flex-1">
+            <code className="text-sm font-mono">{revision.code}</code>
+          </pre>
+        </section>
+        <section className="lg:max-w-xs">
+          <h1 className="text-2xl font-bold mb-4">{component.name}</h1>
+          <p className="mb-8">{component.description}</p>
+
           <h2 className="text-xl font-bold mb-4">Revisions</h2>
           <ul>
             {revisions.map((revision, index) => (
@@ -80,8 +81,8 @@ export default function ComponentDashboard() {
               </li>
             ))}
           </ul>
-        </aside>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

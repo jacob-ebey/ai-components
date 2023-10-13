@@ -8,8 +8,9 @@ import { desc, eq, sql } from "drizzle-orm";
 import { OpenAI } from "openai";
 
 import * as ai from "~/ai.server";
-import { link } from "~/components/defaults";
-import { Input, Label } from "~/components/form";
+import { Button } from "~/components/ui/button";
+import { Label } from "~/components/ui/label";
+import { Input } from "~/components/ui/input";
 import {
   db,
   componentRevisionTable,
@@ -17,6 +18,8 @@ import {
   openAiApiKeyTable,
 } from "~/db.server";
 import { sessionStorage } from "~/http.server";
+
+import ComponentCard from "./component-card";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const session = await sessionStorage.getSession(
@@ -93,37 +96,29 @@ export default function Dashboard() {
         <div className="px-4 my-4">
           <p>
             You need an OpenAI API key to use this app.{" "}
-            <Link to="/settings" className={link}>
-              Go to settings
-            </Link>{" "}
+            <Button asChild variant="secondary">
+              <Link to="/settings">Go to your settings</Link>
+            </Button>{" "}
             to add your API key.
           </p>
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 dark:bg-black px-4 my-4">
         {newComponent.state !== "idle" && (
-          <div className="block border dark:border-gray-600 rounded p-4">
-            <h3 className="font-bold text-lg">
-              Generating{" "}
-              <small className="text-gray-600 dark:text-gray-200">v0</small>
-            </h3>
-            <p>{String(newComponent.formData?.get("prompt"))}</p>
-          </div>
+          <ComponentCard
+            name="Generating..."
+            version={0}
+            description={String(newComponent.formData?.get("prompt"))}
+          />
         )}
         {components.map((component, index) => (
-          <a
-            key={index}
-            href={`/dashboard/${component.id}`}
-            className="block border dark:border-gray-600 rounded p-4"
-          >
-            <h3 className="font-bold text-lg">
-              {component.name}{" "}
-              <small className="text-gray-600 dark:text-gray-200">
-                v{component.versions}
-              </small>
-            </h3>
-            <p>{component.description}</p>
-          </a>
+          <Link key={index} to={`/dashboard/${component.id}`} className="flex">
+            <ComponentCard
+              name={component.name}
+              version={component.versions}
+              description={component.description}
+            />
+          </Link>
         ))}
       </div>
     </main>

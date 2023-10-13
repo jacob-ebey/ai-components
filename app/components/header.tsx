@@ -1,14 +1,20 @@
+import React from "react";
 import { Link } from "@remix-run/react";
+import { Button } from "~/components/ui/button";
 
-import { link } from "./defaults";
-
-const Header = () => {
+const Header: React.FC = () => {
   return (
-    <header className="flex justify-between items-center p-4 bg-white dark:bg-black">
-      <p className="text-3xl font-bold text-gray-800 dark:text-white">RC</p>
-      <Link to="/" className={`text-lg ${link}`}>
-        Home
-      </Link>
+    <header className="flex justify-between items-center p-5 bg-white dark:bg-black">
+      <div className="text-2xl font-bold text-gray-800 dark:text-white">RC</div>
+      <div>
+        <Button
+          asChild
+          variant="outline"
+          className="text-gray-800 dark:text-white"
+        >
+          <Link to="/">Home</Link>
+        </Button>
+      </div>
     </header>
   );
 };

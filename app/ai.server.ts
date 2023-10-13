@@ -178,10 +178,12 @@ export const designComponentFactory = multipassFactory({ debug: true })
     };
   })
   .pass("build-component-context", ({ input }) => {
-    console.log({ components: input.components });
-    const neededComponents = new Set(
-      input.components?.map((c) => c.toLowerCase()) ?? []
-    );
+    const allComponents =
+      input.components && typeof input.components === "string"
+        ? [input.components]
+        : input.components ?? [];
+    console.log({ components: allComponents });
+    const neededComponents = new Set(allComponents.map((c) => c.toLowerCase()));
     const components = input.componentsMetadata.filter((c) =>
       neededComponents.has(c.name.toLowerCase())
     );
