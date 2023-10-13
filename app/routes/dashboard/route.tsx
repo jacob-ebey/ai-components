@@ -3,7 +3,12 @@ import {
   type LoaderFunctionArgs,
   redirect,
 } from "@remix-run/node";
-import { Link, useFetcher, useLoaderData } from "@remix-run/react";
+import {
+  Link,
+  useActionData,
+  useFetcher,
+  useLoaderData,
+} from "@remix-run/react";
 import { desc, eq, sql } from "drizzle-orm";
 import { OpenAI } from "openai";
 
@@ -126,62 +131,69 @@ export default function Dashboard() {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  const session = await sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-  const userId = session.get("userId");
-  if (!userId) {
-    throw redirect("/signin");
-  }
+  try {
+    const session = await sessionStorage.getSession(
+      request.headers.get("Cookie")
+    );
+    const userId = session.get("userId");
+    if (!userId) {
+      throw redirect("/signin");
+    }
 
-  const apiKeys = await db
-    .select({
-      apiKey: openAiApiKeyTable.apiKey,
-    })
-    .from(openAiApiKeyTable)
-    .where(eq(openAiApiKeyTable.userId, userId));
-  const apiKey = apiKeys[0]?.apiKey;
+    const apiKeys = await db
+      .select({
+        apiKey: openAiApiKeyTable.apiKey,
+      })
+      .from(openAiApiKeyTable)
+      .where(eq(openAiApiKeyTable.userId, userId));
+    const apiKey = apiKeys[0]?.apiKey;
 
-  if (!apiKey) {
-    return {
-      error: "You must provide an OpenAI API key.",
-    };
-  }
+    if (!apiKey) {
+      return {
+        error: "You must provide an OpenAI API key.",
+      };
+    }
 
-  const formData = await request.formData();
-  const prompt = formData.get("prompt");
+    const formData = await request.formData();
+    const prompt = formData.get("prompt");
 
-  if (typeof prompt !== "string" || !prompt) {
-    return {
-      error: "Invalid prompt",
-    };
-  }
+    if (typeof prompt !== "string" || !prompt) {
+      return {
+        error: "Invalid prompt",
+      };
+    }
 
-  const openai = new OpenAI({ apiKey });
-  const generated = await ai.designComponentFactory.build(openai)({
-    input: prompt,
-  });
+    const openai = new OpenAI({ apiKey });
+    const generated = await ai.designComponentFactory.build(openai)({
+      input: prompt,
+    });
 
-  const newComponents = await db
-    .insert(componentTable)
-    .values({
-      name: generated.name,
-      description: generated.description,
-      userId,
-    })
-    .returning({ id: componentTable.id });
-  const newComponent = newComponents[0];
-  if (!newComponent) {
+    const newComponents = await db
+      .insert(componentTable)
+      .values({
+        name: generated.name,
+        description: generated.description,
+        userId,
+      })
+      .returning({ id: componentTable.id });
+    const newComponent = newComponents[0];
+    if (!newComponent) {
+      return {
+        error: "Failed to create component",
+      };
+    }
+
+    await db.insert(componentRevisionTable).values({
+      code: generated.code,
+      prompt: generated.prompt,
+      componentId: newComponent.id,
+    });
+
+    throw redirect(`/dashboard/${newComponent.id}`);
+  } catch (error) {
+    console.error(error);
     return {
       error: "Failed to create component",
     };
   }
-
-  await db.insert(componentRevisionTable).values({
-    code: generated.code,
-    prompt: generated.prompt,
-    componentId: newComponent.id,
-  });
-
-  throw redirect(`/dashboard/${newComponent.id}`);
 }
