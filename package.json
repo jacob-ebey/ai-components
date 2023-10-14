@@ -18,6 +18,8 @@
     "@remix-run/node": "^2.0.1",
     "@remix-run/react": "^2.0.1",
     "@remix-run/serve": "^2.0.1",
+    "@webcontainer/api": "^1.1.7",
+    "@zip.js/zip.js": "^2.7.29",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^9.0.0",
     "class-variance-authority": "^0.7.0",

@@ -8,6 +8,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { OpenAI } from "openai";
 
 import * as ai from "~/ai.server";
+import { initDevServer } from "~/components/component-preview";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
@@ -20,6 +21,8 @@ import {
 import { sessionStorage } from "~/http.server";
 
 import ComponentCard from "./component-card";
+import { cn } from "~/lib/utils";
+import { useEffect } from "react";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const session = await sessionStorage.getSession(
@@ -74,6 +77,10 @@ export default function Dashboard() {
 
   const newComponent = useFetcher<typeof action>();
 
+  useEffect(() => {
+    initDevServer();
+  }, []);
+
   return (
     <main>
       {hasApiKey ? (
@@ -91,6 +98,16 @@ export default function Dashboard() {
               <strong>{newComponent.data.error}</strong>
             </p>
           )}
+          <div
+            className={cn(
+              "w-full mt-1",
+              newComponent.state !== "idle" ? "" : "invisible"
+            )}
+          >
+            <div className="h-1 w-full bg-pink-100 overflow-hidden rounded-sm">
+              <div className="animate-progress w-full h-full bg-pink-500 origin-left-right"></div>
+            </div>
+          </div>
         </newComponent.Form>
       ) : (
         <div className="px-4 my-4">
@@ -186,6 +203,10 @@ export async function action({ request }: ActionFunctionArgs) {
 
     throw redirect(`/dashboard/${newComponent.id}`);
   } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+
     console.error(error);
     return {
       error: "Failed to create component",

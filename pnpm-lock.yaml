@@ -26,6 +26,12 @@ dependencies:
   '@remix-run/serve':
     specifier: ^2.0.1
     version: 2.0.1(typescript@5.2.2)
+  '@webcontainer/api':
+    specifier: ^1.1.7
+    version: 1.1.7
+  '@zip.js/zip.js':
+    specifier: ^2.7.29
+    version: 2.7.29
   bcryptjs:
     specifier: ^2.4.3
     version: 2.4.3
@@ -1769,6 +1775,15 @@ packages:
 
   /@web3-storage/multipart-parser@1.0.0:
     resolution: {integrity: sha512-BEO6al7BYqcnfX15W2cnGR+Q566ACXAT9UQykORCWW80lmkpWsnEob6zJS1ZVBKsSJC8+7vJkHwlp+lXG1UCdw==}
+
+  /@webcontainer/api@1.1.7:
+    resolution: {integrity: sha512-wUQRj0v4JV35xhyI45lbesy9B+u9OQYFmrf5Xx0EKyXiRL0q8X6m4sEQxxElKwDXS49wvnHSJtQAlMEoT24HLQ==}
+    dev: false
+
+  /@zip.js/zip.js@2.7.29:
+    resolution: {integrity: sha512-KtOa3HY7Vi77ctZAVhx2nsKweDTCP4DVBghZkvg5qyIX6T/Z54QlU6f0q2hFhxu5j+LgUDeMMhiv2xj4ZF6snA==}
+    engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=16.5.0'}
+    dev: false
 
   /@zxing/text-encoding@0.9.0:
     resolution: {integrity: sha512-U/4aVJ2mxI0aDNI8Uq0wEhMgY+u4CNtEb0om3+y3+niDAsoTCOB33UF0sxpzqzdqXLqmvc+vZyAt4O8pPdfkwA==}
