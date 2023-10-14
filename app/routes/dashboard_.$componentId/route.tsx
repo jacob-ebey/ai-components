@@ -71,6 +71,9 @@ export default function ComponentDashboard() {
   const commitComponent = useFetcher<typeof action>();
   const [searchParams] = useSearchParams();
 
+  const loading =
+    modifyComponent.state !== "idle" || commitComponent.state !== "idle";
+
   const v = searchParams.get("v");
 
   const revision = useMemo(() => {
@@ -93,11 +96,22 @@ export default function ComponentDashboard() {
   }, [revision]);
 
   return (
-    <main className="p-4">
-      <nav className="mb-4">
-        <Button asChild variant="link">
-          <Link to="/dashboard">Back to dashboard</Link>
-        </Button>
+    <main className="px-4 pb-4">
+      <nav className="dark:bg-black bg-white rounded shadow flex space-x-2 text-sm">
+        <div className="text-blue-500 dark:text-blue-300">
+          <Link
+            to="/dashboard"
+            className="dark:hover:text-blue-200 hover:text-blue-700"
+          >
+            Dashboard
+          </Link>
+        </div>
+        <div>
+          <span className="text-gray-400 mx-1">/</span>
+        </div>
+        <div className="text-blue-500 dark:text-blue-300">
+          <span className="text-gray-400">{component.name}</span>
+        </div>
       </nav>
       <div className="relative flex flex-col-reverse lg:flex-row gap-4">
         <section className="flex-1 relative">
@@ -108,7 +122,7 @@ export default function ComponentDashboard() {
             <code className="text-sm font-mono">{revision.code}</code>
           </pre> */}
         </section>
-        <section className="lg:max-w-md">
+        <section className="lg:max-w-md pt-4">
           <h1 className="text-2xl font-bold mb-4 break-words">
             {component.name}
           </h1>
@@ -140,19 +154,14 @@ export default function ComponentDashboard() {
               name="prompt"
               id="prompt"
               placeholder="Prompt"
-              disabled={modifyComponent.state !== "idle"}
+              disabled={loading}
             />
             {modifyComponent.data?.error && (
               <p className="text-red-500 text-sm mt-2">
                 <strong>{modifyComponent.data.error}</strong>
               </p>
             )}
-            <div
-              className={cn(
-                "w-full mt-1",
-                modifyComponent.state !== "idle" ? "" : "invisible"
-              )}
-            >
+            <div className={cn("w-full mt-1", loading ? "" : "invisible")}>
               <div className="h-1 w-full bg-pink-100 overflow-hidden rounded-sm">
                 <div className="animate-progress w-full h-full bg-pink-500 origin-left-right"></div>
               </div>
@@ -168,10 +177,11 @@ export default function ComponentDashboard() {
           >
             <input type="hidden" name="intent" value="commit-component" />
             <Textarea
+              name="code"
               aria-label="Code"
-              className="border flex-1 font-mono"
+              className="border flex-1 text-xs font-mono whitespace-pre overflow-x-auto"
               key={revision.id}
-              disabled={modifyComponent.state !== "idle"}
+              disabled={loading}
               rows={20}
               required
               value={code}
@@ -181,28 +191,26 @@ export default function ComponentDashboard() {
             />
 
             <div className="mt-4">
-              <Label htmlFor="update-message">Commit Message</Label>
+              <Label htmlFor="commit-message">Commit Message</Label>
               <Input
                 type="text"
-                name="update-message"
-                id="update-message"
+                name="commit-message"
+                id="commit-message"
                 placeholder="Commit message"
-                disabled={modifyComponent.state !== "idle"}
+                disabled={loading}
                 autoComplete="off"
                 required
               />
+              {commitComponent.data?.error && (
+                <p className="text-red-500 text-sm mt-2">
+                  <strong>{commitComponent.data.error}</strong>
+                </p>
+              )}
               <p className="mt-4">
-                <Button
-                  disabled={modifyComponent.state !== "idle"}
-                  type="submit"
-                >
+                <Button disabled={loading} type="submit">
                   Commit manual edit
                 </Button>
-                <Button
-                  disabled={modifyComponent.state !== "idle"}
-                  type="reset"
-                  variant="secondary"
-                >
+                <Button disabled={loading} type="reset" variant="secondary">
                   Reset
                 </Button>
               </p>
@@ -325,8 +333,65 @@ export async function action({ params, request }: ActionFunctionArgs) {
         throw redirect(`/dashboard/${newComponent.id}?v=${newRevision.id}`);
       }
       case "commit-component": {
-        throw new Error("Not implemented");
-        break;
+        const code = formData.get("code");
+        const commitMessage = formData.get("commit-message");
+
+        if (
+          typeof code !== "string" ||
+          !code ||
+          typeof commitMessage !== "string" ||
+          !commitMessage
+        ) {
+          return {
+            error: "Invalid request",
+          };
+        }
+
+        const openai = new OpenAI({ apiKey });
+        const generated = await ai.generateEditFactory.build(openai)({
+          input: {
+            code,
+            commitMessage,
+            previousDescription: component.description,
+          },
+        });
+
+        const newComponents = await db
+          .update(componentTable)
+          .set({
+            name: generated.name,
+            description: generated.description,
+          })
+          .where(
+            and(
+              eq(componentTable.id, componentId),
+              eq(componentTable.userId, userId)
+            )
+          )
+          .returning({ id: componentTable.id });
+        const newComponent = newComponents[0];
+        if (!newComponent) {
+          return {
+            error: "Failed to commit component",
+          };
+        }
+
+        const newRevisions = await db
+          .insert(componentRevisionTable)
+          .values({
+            code,
+            prompt: commitMessage,
+            componentId: newComponent.id,
+          })
+          .returning({ id: componentRevisionTable.id });
+        const newRevision = newRevisions[0];
+        if (!newRevision) {
+          return {
+            error: "Failed to commit component",
+          };
+        }
+
+        throw redirect(`/dashboard/${newComponent.id}?v=${newRevision.id}`);
       }
       default:
         throw new Error("Invalid intent");
@@ -336,6 +401,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
       throw error;
     }
 
+    console.error(error);
     return {
       error: `Failed to update component`,
     };

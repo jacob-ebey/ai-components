@@ -587,3 +587,66 @@ export const iterateComponentFactory = (
       code,
     };
   });
+
+export const generateEditFactory = (
+  multipassFactory({
+    debug: true,
+  }) as unknown as MultipassFactory<{
+    commitMessage: string;
+    previousDescription: string;
+    code: string;
+  }>
+).pass("generate-new-component-info-from-edit", async ({ input, complete }) => {
+  const completion = await complete({
+    model: "gpt-3.5-turbo",
+    functions: [
+      {
+        name: "generate_new_component_info_from_edit",
+        description:
+          "generate a new description and extract the component name from the provided component code, previous description, and commit message",
+        parameters: {
+          type: "object",
+          properties: {
+            new_component_name: {
+              type: "string",
+              description:
+                "the name of the default export component in the code",
+            },
+            new_component_description: {
+              type: "string",
+              description: `Write a description for the React component design task based on the commit message, and previous description. Stick strictly to what the user wants in their request - do not go off track`,
+            },
+          },
+          required: ["new_component_name", "new_component_description"],
+        },
+      },
+    ],
+    messages: logPromptTokens("edit", [
+      {
+        role: "system",
+        content:
+          "Your task is to generate a new description and extract the component name from the provided component code, previous description, and commit message",
+      },
+      {
+        role: "user",
+        content:
+          `- Commit message : ${input.commitMessage}\n` +
+          `- Previous description : \`\`\`\n${input.previousDescription}\n\`\`\`\n` +
+          `- Component code : \n\`\`\`tsx\n${input.code}\n\`\`\`\n\n` +
+          `Generate a new description and extract the component name from the provided component code, previous description, and commit message`,
+      },
+    ]),
+  });
+  if (!completion.functionCall) {
+    throw new Error("no function call");
+  }
+  const functionCall = completion.functionCall as {
+    new_component_name: string;
+    new_component_description: string;
+  };
+
+  return {
+    name: functionCall.new_component_name,
+    description: functionCall.new_component_description,
+  };
+});
