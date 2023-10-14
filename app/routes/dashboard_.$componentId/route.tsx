@@ -11,7 +11,7 @@ import {
 } from "@remix-run/react";
 import { and, asc, eq } from "drizzle-orm";
 import { OpenAI } from "openai";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import * as ai from "~/ai.server";
 import { ComponentPreview } from "~/components/component-preview";
@@ -86,6 +86,12 @@ export default function ComponentDashboard() {
     return found;
   }, [revisions, v]);
 
+  const [code, setCode] = useState(revision.code);
+
+  useEffect(() => {
+    setCode(revision.code);
+  }, [revision]);
+
   return (
     <main className="p-4">
       <nav className="mb-4">
@@ -93,16 +99,16 @@ export default function ComponentDashboard() {
           <Link to="/dashboard">Back to dashboard</Link>
         </Button>
       </nav>
-      <div className="flex flex-col-reverse lg:flex-row gap-4">
+      <div className="relative flex flex-col-reverse lg:flex-row gap-4">
         <section className="flex-1 relative">
           <div className="pt-4 sticky top-0">
-            <ComponentPreview code={revision.code} />
+            <ComponentPreview code={code} />
           </div>
           {/* <pre className="overflow-x-auto p-4 border flex-1">
             <code className="text-sm font-mono">{revision.code}</code>
           </pre> */}
         </section>
-        <section className="lg:max-w-s">
+        <section className="lg:max-w-md">
           <h1 className="text-2xl font-bold mb-4 break-words">
             {component.name}
           </h1>
@@ -153,15 +159,25 @@ export default function ComponentDashboard() {
             </div>
           </modifyComponent.Form>
 
-          <commitComponent.Form method="post" className="flex-1 flex flex-col">
+          <commitComponent.Form
+            method="post"
+            className="flex-1 flex flex-col"
+            onReset={() => {
+              setCode(revision.code);
+            }}
+          >
             <input type="hidden" name="intent" value="commit-component" />
             <Textarea
+              aria-label="Code"
               className="border flex-1 font-mono"
               key={revision.id}
-              defaultValue={revision.code}
               disabled={modifyComponent.state !== "idle"}
               rows={20}
               required
+              value={code}
+              onChange={(event) => {
+                setCode(event.target.value);
+              }}
             />
 
             <div className="mt-4">
@@ -172,6 +188,7 @@ export default function ComponentDashboard() {
                 id="update-message"
                 placeholder="Commit message"
                 disabled={modifyComponent.state !== "idle"}
+                autoComplete="off"
                 required
               />
               <p className="mt-4">
@@ -180,6 +197,13 @@ export default function ComponentDashboard() {
                   type="submit"
                 >
                   Commit manual edit
+                </Button>
+                <Button
+                  disabled={modifyComponent.state !== "idle"}
+                  type="reset"
+                  variant="secondary"
+                >
+                  Reset
                 </Button>
               </p>
             </div>

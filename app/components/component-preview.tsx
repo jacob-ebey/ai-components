@@ -32,15 +32,10 @@ export function initDevServer() {
       console.log("initializing vite app...");
       const zipResponse = await fetch("/vite-template-main.zip");
       const reader = new ZipReader(zipResponse.body!);
-      const entries = await reader.getEntries({
-        async onprogress(progress, total) {
-          console.log("extracted", progress, total);
-        },
-      });
+      const entries = await reader.getEntries();
       for (const entry of entries) {
         const fullPath = entry.filename.slice("vite-template-main/".length);
         if (entry.directory && fullPath) {
-          console.log("mkdir", fullPath);
           await webContainer.fs.mkdir(fullPath, { recursive: true });
         }
         if (entry.directory || !entry.getData) continue;
@@ -106,7 +101,7 @@ export function ComponentPreview({ code }: { code: string }) {
     return () => {
       aborted = true;
     };
-  }, [code]);
+  }, []);
 
   useEffect(() => {
     if (devServer) {
@@ -116,11 +111,13 @@ export function ComponentPreview({ code }: { code: string }) {
 
   return devServer ? (
     <iframe
-      className="w-full min-h-[50vh]"
+      className="w-full h-[calc(100vh-(16px*2))] min-h-[50vh] border"
       title="Component Preview"
       src={devServer.url}
     />
   ) : (
-    <p>Loading Component Preview...</p>
+    <div className="h-[calc(100vh-(16px*2))] min-h-[50vh] border p-4">
+      <p>Loading Component Preview...</p>
+    </div>
   );
 }
