@@ -4,6 +4,12 @@
 
 ## Development
 
+Create a `.env` file with the following contents:
+
+```sh
+SESSION_SECRET="super-duper-secret"
+```
+
 From your terminal:
 
 ```sh
