@@ -94,15 +94,15 @@ export default function ComponentDashboard() {
         </Button>
       </nav>
       <div className="flex flex-col-reverse lg:flex-row gap-4">
-        <section className="flex flex-col flex-1 overflow-x-auto">
-          <div className="mt-4">
+        <section className="flex-1 relative">
+          <div className="pt-4 sticky top-0">
             <ComponentPreview code={revision.code} />
           </div>
           {/* <pre className="overflow-x-auto p-4 border flex-1">
             <code className="text-sm font-mono">{revision.code}</code>
           </pre> */}
         </section>
-        <section className="lg:max-w-xs mb-8">
+        <section className="lg:max-w-s">
           <h1 className="text-2xl font-bold mb-4 break-words">
             {component.name}
           </h1>

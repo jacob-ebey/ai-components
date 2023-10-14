@@ -19,7 +19,7 @@ export default function Index() {
   const { loggedIn } = useLoaderData<typeof loader>();
 
   return (
-    <main>
+    <main className="p-4">
       <section className="text-center py-20 bg-gray-100 dark:bg-black">
         <h1 className="text-4xl mb-4 font-bold text-gray-800 dark:text-white">
           Go quickly from idea to prototype.
