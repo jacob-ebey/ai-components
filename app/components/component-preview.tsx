@@ -48,13 +48,6 @@ export function initDevServer() {
         await webContainer.fs.writeFile(fullPath, contents);
       }
 
-      // let process = await webContainer.spawn("npx", [
-      //   "-y",
-      //   "aho",
-      //   "jacob-ebey/vite-template",
-      //   ".",
-      // ]);
-      // logProcessOutput(process);
       console.log("initialized vite app");
 
       console.log("installing dependencies...");
