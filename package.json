@@ -18,6 +18,7 @@
     "@remix-run/node": "^2.0.1",
     "@remix-run/react": "^2.0.1",
     "@remix-run/serve": "^2.0.1",
+    "@uiw/react-textarea-code-editor": "^2.1.9",
     "@webcontainer/api": "^1.1.7",
     "@zip.js/zip.js": "^2.7.29",
     "bcryptjs": "^2.4.3",
@@ -30,10 +31,13 @@
     "openai-multipass": "0.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "rehype": "^13.0.1",
+    "rehype-prism-plus": "^1.6.3",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@babel/runtime": "^7.23.2",
     "@remix-run/dev": "^2.0.1",
     "@remix-run/eslint-config": "^2.0.1",
     "@types/bcryptjs": "^2.4.4",

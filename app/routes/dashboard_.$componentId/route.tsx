@@ -1,7 +1,9 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
   redirect,
+  LinksFunction,
 } from "@remix-run/node";
 import {
   Link,
@@ -11,7 +13,8 @@ import {
 } from "@remix-run/react";
 import { and, asc, eq } from "drizzle-orm";
 import { OpenAI } from "openai";
-import { useEffect, useMemo, useState } from "react";
+import CodeEditor from "@uiw/react-textarea-code-editor";
+import codeEditorStylesHref from "@uiw/react-textarea-code-editor/dist.css";
 
 import * as ai from "~/ai.server";
 import { ComponentPreview } from "~/components/component-preview";
@@ -27,6 +30,13 @@ import {
 } from "~/db.server";
 import { sessionStorage } from "~/http.server";
 import { cn } from "~/lib/utils";
+
+export const links: LinksFunction = () => [
+  {
+    rel: "stylesheet",
+    href: codeEditorStylesHref,
+  },
+];
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
   const componentId = Number.parseInt(params.componentId || "", 10);
@@ -176,13 +186,14 @@ export default function ComponentDashboard() {
             }}
           >
             <input type="hidden" name="intent" value="commit-component" />
-            <Textarea
+            <CodeEditor
               name="code"
               aria-label="Code"
-              className="border flex-1 text-xs font-mono whitespace-pre overflow-x-auto"
+              className="border flex-1 font-mono whitespace-pre overflow-x-auto"
               key={revision.id}
               disabled={loading}
               rows={20}
+              language="jsx"
               required
               value={code}
               onChange={(event) => {
