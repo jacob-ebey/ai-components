@@ -156,7 +156,11 @@ export default function ComponentDashboard() {
             ))}
           </ul>
 
-          <modifyComponent.Form method="post" className="my-4">
+          <modifyComponent.Form
+            method="post"
+            preventScrollReset
+            className="my-4"
+          >
             <input type="hidden" name="intent" value="modify-component" />
             <Label htmlFor="prompt">Modify Component</Label>
             <Input
@@ -165,6 +169,8 @@ export default function ComponentDashboard() {
               id="prompt"
               placeholder="Prompt"
               disabled={loading}
+              autoComplete="off"
+              required
             />
             {modifyComponent.data?.error && (
               <p className="text-red-500 text-sm mt-2">
@@ -180,6 +186,7 @@ export default function ComponentDashboard() {
 
           <commitComponent.Form
             method="post"
+            preventScrollReset
             className="flex-1 flex flex-col"
             onReset={() => {
               setCode(revision.code);
@@ -190,7 +197,7 @@ export default function ComponentDashboard() {
               name="code"
               aria-label="Code"
               className="border flex-1 font-mono whitespace-pre overflow-x-auto"
-              key={revision.id}
+              key={revision.code}
               disabled={loading}
               rows={20}
               language="jsx"
@@ -204,6 +211,7 @@ export default function ComponentDashboard() {
             <div className="mt-4">
               <Label htmlFor="commit-message">Commit Message</Label>
               <Input
+                key={revision.code}
                 type="text"
                 name="commit-message"
                 id="commit-message"
