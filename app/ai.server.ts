@@ -625,7 +625,8 @@ export const generateEditFactory = (
       {
         role: "system",
         content:
-          "Your task is to generate a new description and extract the component name from the provided component code, previous description, and commit message",
+          "Your task is to generate a new description from the previous description, and commit message and extract the component name from the provided component code\n" +
+          "Do not re-name the component, just extract the name from the code",
       },
       {
         role: "user",
@@ -633,7 +634,7 @@ export const generateEditFactory = (
           `- Commit message : ${input.commitMessage}\n` +
           `- Previous description : \`\`\`\n${input.previousDescription}\n\`\`\`\n` +
           `- Component code : \n\`\`\`tsx\n${input.code}\n\`\`\`\n\n` +
-          `Generate a new description and extract the component name from the provided component code, previous description, and commit message`,
+          `Generate a new description from the previous description, and commit message and extract the component name from the provided component code`,
       },
     ]),
   });
