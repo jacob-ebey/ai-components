@@ -1,4 +1,6 @@
-# Welcome to Remix!
+# Remix AI Template!
+
+<img width="1420" alt="image" src="https://github.com/jacob-ebey/ai-components/assets/12063586/a29ee17a-5270-4ccc-95ad-514b5afdefcc">
 
 - [Remix Docs](https://remix.run/docs)
 
