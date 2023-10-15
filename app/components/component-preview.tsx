@@ -27,7 +27,7 @@ export function initDevServer() {
   if (!window.devServerPromise) {
     console.log("booting web container...");
     window.devServerPromise = WebContainer.boot({
-      coep: "none",
+      coep: "require-corp",
     }).then(async (webContainer) => {
       console.log("initializing vite app...");
       const zipResponse = await fetch("/vite-template-main.zip");
