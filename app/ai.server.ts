@@ -1,10 +1,17 @@
 import * as fs from "node:fs/promises";
-import { type MultipassFactory, multipassFactory } from "openai-multipass";
+import * as path from "node:path";
+
 import tiktoken from "@dqbd/tiktoken";
+import { type MultipassFactory, multipassFactory } from "openai-multipass";
+import { LocalIndex } from "vectra";
+
+import componentsMetadata from "../model/chadcn-ui/metadata.json" assert { type: "json" };
 
 const tiktokenEncoder = tiktoken.get_encoding("cl100k_base");
 
 const exampleTokenLimit = 100;
+
+const componentsIndex = new LocalIndex(path.resolve("model/chadcn-ui/db"));
 
 function logPromptTokens(
   label: string,
@@ -73,9 +80,11 @@ async function buildLibraryContext({
   };
 }
 
-function buildComponentContext({
+async function buildComponentContext({
+  embed,
   input,
 }: {
+  embed: (input: string) => Promise<Array<number[]>>;
   input: {
     inputCode: string | null;
     inputName: string | null;
@@ -117,10 +126,33 @@ function buildComponentContext({
       ? [input.components]
       : input.components ?? [];
   console.log({ components: allComponents });
-  const neededComponents = new Set(allComponents.map((c) => c.toLowerCase()));
-  const components = input.componentsMetadata.filter((c) =>
-    neededComponents.has(c.name.toLowerCase())
-  );
+
+  const components = (
+    await Promise.all(
+      allComponents.map(async (name) => {
+        const embedding = (await embed(name))[0];
+        const retrieved = await componentsIndex.queryItems(embedding, 1);
+        const retrievedName = retrieved[0]?.item.metadata
+          ?.name as keyof (typeof componentsMetadata)["components"];
+        if (!retrievedName) return null;
+        const component = componentsMetadata.components[retrievedName];
+        if (!component) return null;
+        return {
+          name: retrievedName,
+          docs: {
+            examples: componentsMetadata.examples.mappings[retrievedName].map(
+              (e) => componentsMetadata.examples.sources[e]
+            ),
+          },
+          ...component,
+        };
+      })
+    )
+  ).filter(notEmpty);
+
+  // const components = input.componentsMetadata.filter((c) =>
+  //   neededComponents.has(c.name.toLowerCase())
+  // );
 
   const componentsContext: {
     role: "user";
@@ -133,7 +165,7 @@ function buildComponentContext({
 
     const examples: (typeof component)["docs"]["examples"][0][] = [];
     for (const example of component.docs.examples) {
-      consumedTokens += tiktokenEncoder.encode(example.code).length;
+      consumedTokens += tiktokenEncoder.encode(example).length;
       if (consumedTokens > exampleTokenLimit) {
         break;
       }
@@ -147,7 +179,7 @@ function buildComponentContext({
         examples
           .map((example) => {
             return (
-              "```" + example.source + "\n" + example.code.trim() + "\n```"
+              "```" + example.source + "\n" + example.trim() + "\n```"
             );
           })
           .join(`\n\n`);
@@ -161,12 +193,12 @@ function buildComponentContext({
         } - ${component.description}\n\n\n` +
         `# ${component.name} can be imported into the new component like this:\n` +
         "```tsx\n" +
-        component.docs.import.code.trim() +
+        component.importStatement.trim() +
         "\n```\n\n---\n\n" +
         `# examples of how ${component.name} can be used inside the new component:\n` +
-        component.docs.use
+        component.docs.examples
           .map((block) => {
-            return "```tsx\n" + block.code.trim() + "\n```";
+            return "```tsx\n" + block.trim() + "\n```";
           })
           .join(`\n\n`) +
         "\n\n---" +
@@ -428,7 +460,6 @@ export const iterateComponentFactory = (
                   description: "the name of the library components to use",
                   items: {
                     type: "string",
-                    enum: input.componentsMetadata.map((e) => e.name),
                   },
                 },
               },
@@ -651,3 +682,7 @@ export const generateEditFactory = (
     description: functionCall.new_component_description,
   };
 });
+
+function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
+  return value !== null && value !== undefined;
+}

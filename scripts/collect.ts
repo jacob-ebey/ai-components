@@ -1,0 +1,1 @@
+import "./collect-shadcn-ui";
